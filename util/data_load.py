@@ -53,21 +53,25 @@ class TrainData(Dataset):
             line = self.train[index]
             content, label = line
 
+        # words to ids
         encoder_data_id = [TrainData.word_to_id[x] for x in content if x in TrainData.word_to_id]
         decoder_data_id = [TrainData.word_to_id[x] for x in label if x in TrainData.word_to_id]
-        label_id = [TrainData.word_to_id[x] for x in label if x in TrainData.word_to_id]
-
+        # add sos
         decoder_data_id = [self.SOS] + decoder_data_id
 
-        encoder_data_id, pad_start = self.crop_pad(encoder_data_id)
-        decoder_data_id, pad_start = self.crop_pad(decoder_data_id)
-        label_id, pad_start = self.crop_pad(label_id)
+        label_id = [TrainData.word_to_id[x] for x in label if x in TrainData.word_to_id]
+
+        # add eos pad
+        encoder_data_id, pad_start_encoder = self.crop_pad(encoder_data_id)
+
+        decoder_data_id, pad_start_decoder = self.crop_pad(decoder_data_id)
+        label_id, pad_start_label = self.crop_pad(label_id)
 
         encoder_data_id = torch.LongTensor(np.array(encoder_data_id, dtype=np.int64))
         decoder_data_id = torch.LongTensor(np.array(decoder_data_id, dtype=np.int64))
         label = torch.LongTensor(np.array(label_id, dtype=np.int64))
 
-        return encoder_data_id, decoder_data_id, label
+        return encoder_data_id, decoder_data_id, label, [pad_start_encoder]
 
     def __len__(self):
         return len(self.train)
@@ -80,6 +84,7 @@ class TrainData(Dataset):
 
     def get_word_by_id(self, id):
         return str(self.words[id])
+
 
 class PredictionData():
 
@@ -97,14 +102,14 @@ class PredictionData():
             return content, self.sen_len
         else:
             pad_start = len(content)
-            tmp_zero = [self.EOS] * (self.sen_len - len(content))
+            # prediction is save as train
+            tmp_zero = [self.EOS]   # * (self.sen_len - len(content))
             content.extend(tmp_zero)
             return content, pad_start
 
     def get_ids_by_words(self, words):
         print(words)
         encoder_data_id = [self.word_to_id[x] for x in words if x in self.word_to_id]
-        print(encoder_data_id)
         decoder_data_id = [self.SOS]
 
         encoder_data_id, pad_start = self.crop_pad(encoder_data_id)

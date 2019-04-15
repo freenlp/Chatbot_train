@@ -6,7 +6,7 @@ from model.lstm import Seq2seq
 # 词汇表
 vocab_file = 'data/ai.vocab.txt'
 
-sentence_len = 10
+sentence_len = 80
 vocab_size = 400
 batch_size = 1
 
@@ -49,7 +49,7 @@ def prediction(model, question, data_layer):
     return answer
 
 question = "什么是ai"
-model = Seq2seq(batch_size, hidden_size, vocab_size, embedding_length)
+model = Seq2seq(batch_size, hidden_size, vocab_size, embedding_length, False)
 model.load_state_dict(torch.load('save_model/81_params.pkl'))
 prediction(model, question, data_layer)
 
