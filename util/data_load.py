@@ -43,6 +43,7 @@ class TrainData(Dataset):
             content.extend(tmp_zero)
             return content, pad_start
 
+
     def __getitem__(self, index):
         line = self.train[index]
         content, label = line

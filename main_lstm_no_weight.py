@@ -31,6 +31,7 @@ def clip_gradient(model, clip_value):
     for p in params:
         p.grad.data.clamp_(-clip_value, clip_value)
 
+
 def sort_by_pad_start(encoder_input, decoder_input, target, pad_start):
     idx_sort = np.argsort(-pad_start)
     pad_start = pad_start[idx_sort]
