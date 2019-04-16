@@ -18,7 +18,7 @@ class TrainData(Dataset):
     words = None
     word_to_id = None
 
-    def __init__(self, train_file, vocab_file, sen_len):
+    def __init__(self, train_file, vocab_file, sen_len, train_sc=False):
 
         if TrainData.word_to_id == None and TrainData.words == None:
             TrainData.words, TrainData.word_to_id = read_vocab(vocab_file)
@@ -26,11 +26,29 @@ class TrainData(Dataset):
         self.SOS = TrainData.word_to_id['<SOS>']
         self.EOS = TrainData.word_to_id['<EOS>']
         self.train_file = train_file
-        with open(train_file) as f:
-            data = yaml.load(f)
-            # two dim array list
-            self.train = data['conversations']
+        self.train_sc = train_sc
+        if not train_sc:
+            with open(train_file) as f:
+                data = yaml.load(f)
+                # two dim array list
+                self.train = data['conversations']
+        else:
+            self.train = []
+            self.get_data(train_file)
         self.sen_len = sen_len
+
+    def get_data(self, train_file):
+        with open(train_file) as f:
+            for line in f:
+                line_split = line.strip().split()
+                label = int(line_split[1])
+                with open(line_split[0]) as f_second:
+                    data = yaml.load(f_second)
+                    content = data['conversations']
+                    for item in content:
+                        tmp_item = item
+                        tmp_item.append(label)
+                        self.train.append(tmp_item)
 
     def crop_pad(self, content):
         if len(content) > self.sen_len:
@@ -45,13 +63,16 @@ class TrainData(Dataset):
 
     def __getitem__(self, index):
         line = self.train[index]
-        content, label = line
-        while not content:
+        while len(line) !=2 and len(line) !=3:
             print("line format wrong ")
             print(line)
             index += 1
             line = self.train[index]
-            content, label = line
+
+        content = line[0]
+        label = line[1]
+        if self.train_sc:
+            class_label = line[2]
 
         # words to ids
         encoder_data_id = [TrainData.word_to_id[x] for x in content if x in TrainData.word_to_id]
@@ -71,7 +92,11 @@ class TrainData(Dataset):
         decoder_data_id = torch.LongTensor(np.array(decoder_data_id, dtype=np.int64))
         label = torch.LongTensor(np.array(label_id, dtype=np.int64))
 
-        return encoder_data_id, decoder_data_id, label, [pad_start_encoder]
+        if self.train_sc:
+            class_label = torch.LongTensor([class_label])
+            return encoder_data_id, decoder_data_id, label, [pad_start_encoder], class_label
+        else:
+            return encoder_data_id, decoder_data_id, label, [pad_start_encoder]
 
     def __len__(self):
         return len(self.train)
@@ -85,6 +110,12 @@ class TrainData(Dataset):
     def get_word_by_id(self, id):
         return str(self.words[id])
 
+    def get_num_by_label(self, label):
+        num = 0
+        for item in self.train:
+            if item[2] in label:
+                num += 1
+        return num
 
 class PredictionData():
 
