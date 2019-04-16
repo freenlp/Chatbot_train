@@ -50,7 +50,7 @@ def prediction(model, question, data_layer):
 
 question = "什么是ai"
 model = Seq2seq(batch_size, hidden_size, vocab_size, embedding_length, False)
-model.load_state_dict(torch.load('save_model/81_params.pkl'))
+model.load_state_dict(torch.load('save_model/21_params.pkl'))
 prediction(model, question, data_layer)
 
 
