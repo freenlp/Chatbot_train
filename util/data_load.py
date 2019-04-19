@@ -27,13 +27,19 @@ class TrainData(Dataset):
         self.EOS = TrainData.word_to_id['<EOS>']
         self.train_file = train_file
         self.train_sc = train_sc
+        self.train = []
         if not train_sc:
             with open(train_file) as f:
-                data = yaml.load(f)
-                # two dim array list
-                self.train = data['conversations']
+                # data = yaml.load(f)
+                # # two dim array list
+                # self.train = data['conversations']
+                for item in f:
+                    item_split = item.strip().split('\t')
+                    if len(item_split) != 2:
+                        print(item_split)
+                        continue
+                    self.train.append(item_split)
         else:
-            self.train = []
             self.get_data(train_file)
         self.sen_len = sen_len
 

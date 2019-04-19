@@ -6,12 +6,12 @@ from torch.utils.data import DataLoader
 import numpy as np
 from model.lstm import Seq2seq
 
-train_file = 'data/chinese/ai.yml'
+train_file = 'data/train_data/chatterbot.tsv'
 # 词汇表
-vocab_file = 'data/ai.vocab.txt'
-
-train_file = 'data/train.txt'
-vocab_file = 'data/vocab.txt'
+vocab_file = 'data/all_vocab.txt'
+#
+# train_file = 'data/train.txt'
+# vocab_file = 'data/vocab.txt'
 
 class TrainModel:
     def __init__(self, train_file, vocab_file, sentence_len):
@@ -20,17 +20,18 @@ class TrainModel:
         self.vocab_file = vocab_file
         self.sentence_len = sentence_len
         self.batch_size = 2
-        self.vocab_size = 500
+        self.vocab_size = 5005
         self.learning_rate = 2e-5
         self.hidden_size = 256
-        self.embedding_length = 100
-        self.train_sc = True
+        self.embedding_length = 256
+        self.train_sc = False
         self.steps = 0
         # model bitch size must be 1
         self.model = Seq2seq(1, self.hidden_size, self.vocab_size, self.embedding_length, self.train_sc)
+        # self.model.load_state_dict(torch.load('save_model/params.pkl', map_location='cpu'))
         if torch.cuda.is_available():
             self.model.cuda()
-        self.optim = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()))
+        self.optim = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=0.001)
         self.loss_fn = F.cross_entropy
 
         self.train_set = dl.TrainData(train_file, vocab_file, sentence_len, self.train_sc)
@@ -43,7 +44,10 @@ class TrainModel:
                                   )
 
         self.train_seq_label = [0]
-        self.train_seq_label_num = self.train_set.get_num_by_label(self.train_seq_label) + 1
+        if self.train_sc:
+            self.train_seq_label_num = self.train_set.get_num_by_label(self.train_seq_label) + 1
+        else:
+            self.train_seq_label_num = len(self.train_set)
     def clip_gradient(self, clip_value):
 
         params = list(filter(lambda p: p.grad is not None, self.model.parameters()))
@@ -103,9 +107,10 @@ class TrainModel:
         decoder_input = batch[1]
         target = batch[2]
         pad_start = batch[3][0]
+        decoder_input_seq = decoder_input
         if torch.cuda.is_available():
             encoder_input = encoder_input.cuda()
-            decoder_input_seq = decoder_input.cuda()
+            decoder_input_seq = decoder_input_seq.cuda()
             target = target.cuda()
 
         output, hidden = self.model.encoder(encoder_input, 1, pad_start)
@@ -114,6 +119,7 @@ class TrainModel:
         loss = 0
         # decoder input more len than target
         sentence_len = decoder_input_seq.shape[1] - 1
+        # not teach
         for di in range(sentence_len):
             decoder_input = decoder_input_seq[:, di].unsqueeze(1).detach()
             decoder_output, decoder_hidden = self.model.decoder(
@@ -155,6 +161,8 @@ class TrainModel:
         total_epoch_acc = 0
         total_epoch_class_loss = 0
         total_epoch_class_acc = 0
+        train_batch_loss = 0
+        train_batch_acc = 0
         self.model.train()
         for idx, batch in enumerate(train_iter):
             if self.train_sc:
@@ -169,17 +177,29 @@ class TrainModel:
                 total_epoch_acc += acc.item()
             self.steps += 1
 
+            if idx % 200 == 0 and idx != 0:
+                train_loss, train_acc = (total_epoch_loss - train_batch_loss) / 200, (total_epoch_acc - train_batch_acc) / 200
+                print('idx: ' + str(idx + 1) + ', Train Loss: ' + str(train_loss) + ', Train Acc: ' + str(train_acc))
+                train_batch_loss = total_epoch_loss
+                train_batch_acc = total_epoch_acc
+
         train_loss, train_acc = total_epoch_loss / self.train_seq_label_num, total_epoch_acc / self.train_seq_label_num
         print('Epoch: ' + str(epoch + 1) + ', Train Loss: ' + str(train_loss) + ', Train Acc: ' + str(train_acc))
         if self.train_sc:
             train_loss, train_acc = total_epoch_class_loss / len(train_iter), total_epoch_class_acc / len(train_iter)
             print('Epoch: ' + str(epoch + 1) + ', Train class Loss: ' + str(train_loss) + ', Train class Acc: ' + str(train_acc))
 
+    def adjust_lr(self, epoch):
+        lr_list = [0, 3, 5]
+        if epoch in lr_list:
+            for param_group in self.optim.param_groups:
+                param_group['lr'] = param_group['lr'] * 0.1
+
     def train(self):
         for epoch in range(100):
             self.train_epoch(self.train_loader, epoch)
-
-            if epoch % 20 == 0:
+            # self.adjust_lr(epoch)
+            if epoch % 1 == 0:
                 torch.save(self.model.state_dict(), 'save_model/'+ str(epoch + 1) +'_params.pkl')
 
 

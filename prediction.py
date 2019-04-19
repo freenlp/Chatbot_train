@@ -8,19 +8,19 @@ import torch.nn.functional as F
 class QaEngine:
     def __init__(self):
         # 词汇表
-        vo_file = 'data/vocab.txt'
+        vo_file = 'data/all_vocab.txt'
 
         self.use_class = True
 
         self.sentence_len = 80
-        self.vo_size = 500
+        self.vo_size = 5005
         self.batch_size = 1
 
         self.hidden_size = 256
-        self.embedding_length = 100
+        self.embedding_length = 256
         self.data_layer = dl.PredictionData(vo_file, self.sentence_len)
         self.model = Seq2seq(self.batch_size, self.hidden_size, self.vo_size, self.embedding_length, self.use_class)
-        self.model.load_state_dict(torch.load('save_model/61_params.pkl'))
+        self.model.load_state_dict(torch.load('save_model/122_params.pkl'))
 
         if torch.cuda.is_available():
             self.model.cuda()
@@ -61,7 +61,7 @@ class QaEngine:
 
 if __name__ == "__main__":
 
-    question = "什么是ai"
+    question = "你是谁"
     qa = QaEngine()
     answer = qa.prediction(question)
     print(answer)

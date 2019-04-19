@@ -17,11 +17,15 @@ class DataGen():
     def read_file(self, filename):
         contents, labels = [], []
         with open(filename) as f:
-            data = yaml.load(f)
+            # data = yaml.load(f)
             # two dim array list
-            train = data['conversations']
-            for item in train:
-                content, label = item
+            # train = data['conversations']
+            for item in f:
+                item_split = item.strip().split('\t')
+                if len(item_split) != 2:
+                    print(item_split)
+                    continue
+                content, label = item_split
                 contents.append(content)
                 labels.append(label)
         return contents, labels
@@ -47,15 +51,12 @@ class DataGen():
             f.write('\n'.join(words) + '\n')
 
 
-base_dir = 'data/chinese'
-train_dir = os.path.join(base_dir, 'ai.yml')
-train_list = []
-
-train_list.append(train_dir)
-train_list.append(os.path.join(base_dir, 'movies.yml'))
+base_dir = '/home/longriyao/sdb/test/data/chat/chinese_chatbot_corpus/clean_chat_corpus'
+train_dir = os.path.join(base_dir, 'train.txt')
+train_list = [train_dir]
 
 save_dir = 'data/'
-vocab_dir = os.path.join(save_dir, 'vocab.txt')
+vocab_dir = os.path.join(save_dir, 'all_vocab.txt')
 
 
 if __name__ == '__main__':
